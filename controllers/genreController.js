@@ -9,6 +9,8 @@ async function findOrCreate(name) {
   const [tempGame, created] = await Game.findOrCreate({
     where: { name: name },
     defaults: {
+      description:
+        "The published date and description are unfinished. Please update these.",
       published: "12-31-2000",
     },
   });
@@ -41,7 +43,6 @@ exports.createGenrePost = [
       description: req.body.description,
     });
     const games = [];
-    console.log(req.body.game.length, req.body.game);
 
     if (!errors.isEmpty()) {
       /*res.render("genre_form", {
@@ -64,10 +65,8 @@ exports.createGenrePost = [
         }
 
         const promisedGames = await Promise.all(games.map((anon) => anon()));
-        console.log(promisedGames);
 
         await genre.save();
-
         await genre.addGames(promisedGames);
 
         res.send("it worked good job");
@@ -84,14 +83,41 @@ exports.updateGenrePost = [
     .isLength({ min: 3 })
     .escape(),
   asyncHandler(async (req, res) => {
-    const genre = await Genre.findOne({ where: { id: req.body.id } });
+    const genre = await Genre.findOne({
+      where: { id: req.body.id },
+      include: Game,
+    });
+    const gameMap = {};
+    const removedGames = [];
     const changes = {};
+    const games = [];
     if (req.body.name) {
       changes.name = req.body.name;
     }
     if (req.body.description) {
       changes.description = req.body.description;
     }
+
+    for (let i = 0; i < req.body.game.length; i++) {
+      games.push(() => findOrCreate(req.body.game[i]));
+      gameMap[req.body.game[i]] = i;
+    }
+
+    for (let j = 0; j < genre.Games.length; j++) {
+      console.log(j, genre.Games[j].name in gameMap);
+      if (genre.Games[j].name in gameMap === false) {
+        const remove = await Game.findOne({
+          where: { id: genre.Games[j].id },
+        });
+        removedGames.push(remove);
+      }
+    }
+
+    const promisedGames = await Promise.all(games.map((anon) => anon()));
+
+    await genre.addGames(promisedGames);
+    await genre.removeGames(removedGames);
+
     await genre.update(changes);
     await genre.reload();
     res.send(
