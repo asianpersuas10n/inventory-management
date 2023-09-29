@@ -1,20 +1,24 @@
 const asyncHandler = require("express-async-handler");
 const { body, validationResult } = require("express-validator");
 const db = require("../models");
-const Game = db.Game;
 const Genre = db.Genre;
+const Game = db.Game;
 const Op = db.Sequelize.Op;
 
 async function findOrCreate(name) {
   const [tempGenre] = await Genre.findOrCreate({
     where: { name: name },
+    defaults: {
+      description:
+        "The published date and description are unfinished. Please update these.",
+    },
   });
   return tempGenre;
 }
 
-// GET request for all games
+// GET request for all game
 exports.gameList = asyncHandler(async (req, res) => {
-  const allGames = await Game.findAll();
+  const allGames = await Game.findAll({ include: Genre });
   res.send(allGames);
 });
 
@@ -24,9 +28,9 @@ exports.gameDetail = asyncHandler(async (req, res) => {
   res.send(game);
 });
 
-// POST request to create Game if it doesn't exist
+// POST request to create game if it doesn't exist
 exports.createGamePost = [
-  body("name", "Game name must be at least three characters long.")
+  body("name", "Genre name must be at least three characters long.")
     .trim()
     .isLength({ min: 3 })
     .escape(),
@@ -34,13 +38,14 @@ exports.createGamePost = [
     const errors = validationResult(req);
     const game = Game.build({
       name: req.body.name,
+      description: req.body.description,
     });
-    const genres = [];
+    const genre = [];
 
     if (!errors.isEmpty()) {
-      /*res.render("game_form", {
-        title: "Create Game",
-        game: game,
+      /*res.render("genre_form", {
+        title: "Create Genre",
+        genre: genre,
         errors: errors.array(),
       });*/
       res.send("error was made");
@@ -50,19 +55,20 @@ exports.createGamePost = [
         where: { name: req.body.name },
       });
       if (gameExists) {
-        //res.redirect(gameExists.url);
+        //res.redirect(genreExists.url);
         res.send("already exist");
       } else {
-        for (let i = 0; i < req.body.genre; i++) {
-          genres.push(() => findOrCreate(req.body.genre[i]));
+        for (let i = 0; i < req.body.genre.length; i++) {
+          genre.push(() => findOrCreate(req.body.genre[i]));
         }
 
-        await Promise.all(genres);
+        const promisedGenre = await Promise.all(genre.map((anon) => anon()));
 
-        await game.addGenres(genres);
         await game.save();
+        await game.addGames(promisedGenre);
+
         res.send("it worked good job");
-        //res.redirect(game.url);
+        //res.redirect(genre.url);
       }
     }
   }),
@@ -70,27 +76,48 @@ exports.createGamePost = [
 
 // POST request to update a game
 exports.updateGamePost = [
-  body("name", "Game name must be at least three characters long.")
+  body("name", "Genre name must be at least three characters long.")
     .trim()
     .isLength({ min: 3 })
     .escape(),
   asyncHandler(async (req, res) => {
-    const game = await Game.findOne({ where: { id: req.body.id } });
+    const game = await Game.findOne({
+      where: { id: req.body.id },
+      include: Genre,
+    });
+    const genreMap = {};
+    const removedGenres = [];
     const changes = {};
+    const genre = [];
     if (req.body.name) {
       changes.name = req.body.name;
     }
     if (req.body.description) {
       changes.description = req.body.description;
     }
-    if (req.body.published) {
-      changes.published = req.body.published;
+
+    for (let i = 0; i < req.body.genre.length; i++) {
+      genre.push(() => findOrCreate(req.body.genre[i]));
+      genreMap[req.body.genre[i]] = i;
     }
+
+    for (let j = 0; j < game.Genres.length; j++) {
+      if (game.Genres[j].name in genreMap === false) {
+        const remove = await Genre.findOne({
+          where: { id: game.Genres[j].id },
+        });
+        removedGenres.push(remove);
+      }
+    }
+
+    const promisedGenres = await Promise.all(genre.map((anon) => anon()));
+
+    await game.addGames(promisedGenres);
+    await game.removeGames(removedGenres);
+
     await game.update(changes);
     await game.reload();
-    res.send(
-      `update complete => name: ${game.name} desc: ${game.description} publish: ${game.published}`
-    );
+    res.send(`update complete => name: ${game.name} desc: ${game.description}`);
   }),
 ];
 

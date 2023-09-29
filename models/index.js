@@ -17,6 +17,9 @@ const db = {};
 
 db.Game = require("./game.js")(sequelize, DataTypes);
 db.Genre = require("./genre.js")(sequelize, DataTypes);
+db.Console = require("./console.js")(sequelize, DataTypes);
+db.Developer = require("./developer.js")(sequelize, DataTypes);
+db.Publisher = require("./publisher.js")(sequelize, DataTypes);
 
 db.Sequelize = DataTypes;
 db.sequelize = sequelize;

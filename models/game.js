@@ -9,7 +9,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     published: {
       type: DataTypes.DATEONLY,
-      allowNull: false,
+    },
+    price: {
+      type: DataTypes.FLOAT(6, 2),
+    },
+    stock: {
+      type: DataTypes.INTEGER,
     },
     url: {
       type: DataTypes.VIRTUAL,
@@ -21,11 +26,10 @@ module.exports = (sequelize, DataTypes) => {
 
   Game.associate = function (models) {
     Game.belongsToMany(models.Genre, { through: "GameGenre" });
+    Game.belongsToMany(models.Publisher, { through: "GamePublisher" });
+    Game.belongsToMany(models.Developer, { through: "GameDeveloper" });
+    Game.belongsToMany(models.Console, { thorugh: "ConsoleGame" });
   };
-
-  //Game.belongsToMany("publisher");
-  //Game.belongsToMany("developer");
-  //Game.belongsToMany("console");
 
   return Game;
 };

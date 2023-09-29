@@ -6,7 +6,7 @@ const Game = db.Game;
 const Op = db.Sequelize.Op;
 
 async function findOrCreate(name) {
-  const [tempGame, created] = await Game.findOrCreate({
+  const [tempGame] = await Game.findOrCreate({
     where: { name: name },
     defaults: {
       description:
@@ -14,7 +14,6 @@ async function findOrCreate(name) {
       published: "12-31-2000",
     },
   });
-  console.log(created);
   return tempGame;
 }
 
@@ -104,7 +103,6 @@ exports.updateGenrePost = [
     }
 
     for (let j = 0; j < genre.Games.length; j++) {
-      console.log(j, genre.Games[j].name in gameMap);
       if (genre.Games[j].name in gameMap === false) {
         const remove = await Game.findOne({
           where: { id: genre.Games[j].id },
