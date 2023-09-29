@@ -25,7 +25,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Console.associate = function (models) {
-    Console.belongsToMany(models.Game, { thorugh: "ConsoleGame" });
+    Console.belongsToMany(models.Game, { through: "ConsoleGame" });
   };
 
   return Console;

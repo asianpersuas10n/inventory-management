@@ -22,7 +22,7 @@ module.exports = (sequelize, DataTypes) => {
     Developer.belongsToMany(models.Publisher, {
       through: "PublisherDeveloper",
     });
-    Developer.belongsToMany(models.Game, { thorugh: "GameDeveloper" });
+    Developer.belongsToMany(models.Game, { through: "GameDeveloper" });
   };
 
   return Developer;

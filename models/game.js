@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
     Game.belongsToMany(models.Genre, { through: "GameGenre" });
     Game.belongsToMany(models.Publisher, { through: "GamePublisher" });
     Game.belongsToMany(models.Developer, { through: "GameDeveloper" });
-    Game.belongsToMany(models.Console, { thorugh: "ConsoleGame" });
+    Game.belongsToMany(models.Console, { through: "ConsoleGame" });
   };
 
   return Game;
