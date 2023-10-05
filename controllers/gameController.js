@@ -3,28 +3,66 @@ const { body, validationResult } = require("express-validator");
 const db = require("../models");
 const Genre = db.Genre;
 const Game = db.Game;
+const Console = db.Console;
+const Publisher = db.Publisher;
+const Developer = db.Developer;
 const Op = db.Sequelize.Op;
 
-async function findOrCreate(name) {
-  const [tempGenre] = await Genre.findOrCreate({
+async function findOrCreate(name, type) {
+  const [tempType] = await type.findOrCreate({
     where: { name: name },
     defaults: {
       description:
         "The published date and description are unfinished. Please update these.",
     },
   });
-  return tempGenre;
+  return tempType;
+}
+
+function promiseCreator(
+  type,
+  bodyType,
+  primaryArr,
+  tempArr,
+  removedArr,
+  create
+) {
+  const map = {};
+
+  for (let i = 0; i < bodyType.length; i++) {
+    tempArr.push(() => findOrCreate(bodyType[i], type));
+    map[bodyType[i]] = i;
+  }
+
+  if (create === true) {
+    return;
+  }
+
+  for (let j = 0; j < primaryArr.Genres.length; j++) {
+    if (primaryArr.Genres[j].name in map === false) {
+      removedArr.push(() =>
+        type.findOne({
+          where: { id: primaryArr.Genres[j].id },
+        })
+      );
+    }
+  }
 }
 
 // GET request for all game
 exports.gameList = asyncHandler(async (req, res) => {
-  const allGames = await Game.findAll({ include: Genre });
+  const allGames = await Game.findAll({
+    include: [Genre, Console, Developer, Publisher],
+  });
   res.send(allGames);
 });
 
 // GET request for a single game
 exports.gameDetail = asyncHandler(async (req, res) => {
-  const game = await Game.findOne({ where: { name: req.body.name } });
+  const game = await Game.findOne({
+    where: { name: req.body.name },
+    include: [Genre, Console, Developer, Publisher],
+  });
   res.send(game);
 });
 
@@ -36,10 +74,18 @@ exports.createGamePost = [
     .escape(),
   asyncHandler(async (req, res) => {
     const errors = validationResult(req);
-    const game = Game.build({
-      name: req.body.name,
-      description: req.body.description,
-    });
+    const newBody = Object.keys(req.body)
+      .filter(
+        (key) =>
+          key !== "Genres" ||
+          key !== "Publishers" ||
+          key !== "Developers" ||
+          key !== "Consoles"
+      )
+      .reduce((cur, key) => {
+        return Object.assign(cur, { [key]: req.body[key] });
+      }, {});
+    const game = Game.build(newBody);
     const genre = [];
 
     if (!errors.isEmpty()) {
@@ -58,14 +104,34 @@ exports.createGamePost = [
         //res.redirect(genreExists.url);
         res.send("already exist");
       } else {
-        for (let i = 0; i < req.body.genre.length; i++) {
-          genre.push(() => findOrCreate(req.body.genre[i]));
+        const promises = [];
+
+        const body = req.body;
+
+        const allArray = [[], [], [], []];
+
+        const [genre, console, publisher, developer] = allArray;
+
+        promiseCreator(Genre, body.Genres, game, genre, [], true);
+        promiseCreator(Console, body.Consoles, game, console, [], true);
+        promiseCreator(Publisher, body.Publishers, game, publisher, [], true);
+        promiseCreator(Developer, body.Developers, game, developer, [], true);
+
+        for (let i = 0; i < allArray.length; i++) {
+          promises.push(() => Promise.all(allArray[i].map((anon) => anon())));
         }
 
-        const promisedGenre = await Promise.all(genre.map((anon) => anon()));
+        const finishedPromises = await Promise.all(
+          promises.map((anon) => anon())
+        );
 
         await game.save();
-        await game.addGames(promisedGenre);
+        await Promise.all([
+          game.addGenres(finishedPromises[0]),
+          game.addConsoles(finishedPromises[1]),
+          game.addPublishers(finishedPromises[2]),
+          game.addDevelopers(finishedPromises[3]),
+        ]);
 
         res.send("it worked good job");
         //res.redirect(genre.url);
@@ -83,39 +149,85 @@ exports.updateGamePost = [
   asyncHandler(async (req, res) => {
     const game = await Game.findOne({
       where: { id: req.body.id },
-      include: Genre,
+      include: [Genre, Console, Publisher, Developer],
     });
-    const genreMap = {};
-    const removedGenres = [];
-    const changes = {};
-    const genre = [];
-    if (req.body.name) {
-      changes.name = req.body.name;
+
+    const promises = [];
+
+    const body = req.body;
+
+    const allArray = [[], [], [], [], [], [], [], []];
+
+    const [
+      genre,
+      console,
+      publisher,
+      developer,
+      removedGenres,
+      removedConsoles,
+      removedPublishers,
+      removedDevelopers,
+    ] = allArray;
+
+    promiseCreator(Genre, body.Genres, game, genre, removedGenres, false);
+    promiseCreator(
+      Console,
+      body.Consoles,
+      game,
+      console,
+      removedConsoles,
+      false
+    );
+    promiseCreator(
+      Publisher,
+      body.Publishers,
+      game,
+      publisher,
+      removedPublishers,
+      false
+    );
+    promiseCreator(
+      Developer,
+      body.Developers,
+      game,
+      developer,
+      removedDevelopers,
+      false
+    );
+
+    for (let i = 0; i < allArray.length; i++) {
+      promises.push(() => Promise.all(allArray[i].map((anon) => anon())));
     }
-    if (req.body.description) {
-      changes.description = req.body.description;
-    }
 
-    for (let i = 0; i < req.body.genre.length; i++) {
-      genre.push(() => findOrCreate(req.body.genre[i]));
-      genreMap[req.body.genre[i]] = i;
-    }
+    const finishedPromises = await Promise.all(promises.map((anon) => anon()));
 
-    for (let j = 0; j < game.Genres.length; j++) {
-      if (game.Genres[j].name in genreMap === false) {
-        const remove = await Genre.findOne({
-          where: { id: game.Genres[j].id },
-        });
-        removedGenres.push(remove);
-      }
-    }
+    const newBody = Object.keys(req.body)
+      .filter(
+        (key) =>
+          key !== "Genres" ||
+          key !== "Publishers" ||
+          key !== "Developers" ||
+          key !== "Consoles"
+      )
+      .reduce((cur, key) => {
+        return Object.assign(cur, { [key]: req.body[key] });
+      }, {});
 
-    const promisedGenres = await Promise.all(genre.map((anon) => anon()));
+    await Promise.all([
+      game.addGenres(finishedPromises[0]),
+      game.addConsoles(finishedPromises[1]),
+      game.addPublishers(finishedPromises[2]),
+      game.addDevelopers(finishedPromises[3]),
+    ]);
 
-    await game.addGames(promisedGenres);
-    await game.removeGames(removedGenres);
+    await Promise.all([
+      game.removeGenres(finishedPromises[4]),
+      game.removeConsoles(finishedPromises[5]),
+      game.removePublishers(finishedPromises[6]),
+      game.removeDevelopers(finishedPromises[7]),
+    ]);
 
-    await game.update(changes);
+    await game.update(newBody);
     await game.reload();
     res.send(`update complete => name: ${game.name} desc: ${game.description}`);
   }),
