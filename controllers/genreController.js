@@ -17,10 +17,19 @@ async function findOrCreate(name) {
   return tempGame;
 }
 
+exports.index = asyncHandler(async (req, res, next) => {
+  res.render("index", {
+    title: "Home",
+  });
+});
+
 // GET request for all genres
 exports.genreList = asyncHandler(async (req, res) => {
   const allGenres = await Genre.findAll({ include: Game });
-  res.send(allGenres);
+  res.render("genre_list", {
+    title: "Genre List",
+    genre_list: allGenres,
+  });
 });
 
 // GET request for a single genre

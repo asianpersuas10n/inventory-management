@@ -8,6 +8,11 @@ const game_controller = require("../controllers/gameController");
 const genre_controller = require("../controllers/genreController.js");
 const publisher_controller = require("../controllers/publisherController");
 
+/// HOME PAGE ///
+
+// GET request for the homepage
+router.get("/", genre_controller.index);
+
 /// GENRE ROUTES ///
 
 // GET request for creating a Genre. NOTE This must come before route that displays Genre (uses id).
