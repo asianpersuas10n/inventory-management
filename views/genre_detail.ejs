@@ -1,0 +1,30 @@
+<%- include("layout")%>
+  <h1>Genre: <%= genre.name %></h1>
+  <h4>Description: <%= genre.description %></h4>
+  <div>
+    <h3>Games</h3>
+    <dl>
+      <% if (Object.keys(genre.Games).length) { %>
+        <% genre.Games.forEach( game => { %>
+          <dt>
+            <a href="<%= game.url %>"><%= game.name %></a>
+          </dt>
+          <dd>
+            Descriptions: <%= game.description %>
+          </dd>
+          <dd>
+            Released: <%= game.published %>
+          </dd>
+          <dd>
+            Price: <%= game.price %>
+          </dd>
+          <dd>
+            Stock: <%= game.stock %>
+          </dd>
+        <% }) %>
+      <% } else { %>
+        <p>This genre has no books</p>
+      <% } %>
+    </dl>
+  </div>
+<%- include("layout_end")%>

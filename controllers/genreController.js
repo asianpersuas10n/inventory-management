@@ -33,10 +33,31 @@ exports.genreList = asyncHandler(async (req, res) => {
 });
 
 // GET request for a single genre
-exports.genreDetail = asyncHandler(async (req, res) => {
-  const genre = await Genre.findOne({ where: { name: req.body.name } });
-  res.send(genre);
+exports.genreDetail = asyncHandler(async (req, res, next) => {
+  const genre = await Genre.findOne({
+    where: { id: req.params.id },
+    include: Game,
+  });
+
+  if (genre === null) {
+    // No results.
+    const err = new Error("Genre not found");
+    err.status = 404;
+    return next(err);
+  }
+
+  res.render("genre_detail", {
+    title: "Genre Detail",
+    genre: genre,
+  });
 });
+
+// GET request for genre form
+exports.createGenreGet = (req, res) => {
+  res.render("genre_form", {
+    title: "Genre Form",
+  });
+};
 
 // POST request to create Genre if it doesn't exist
 exports.createGenrePost = [
@@ -46,6 +67,7 @@ exports.createGenrePost = [
     .escape(),
   asyncHandler(async (req, res) => {
     const errors = validationResult(req);
+    const game = req.body.game.split(", ");
     const genre = Genre.build({
       name: req.body.name,
       description: req.body.description,
@@ -53,11 +75,11 @@ exports.createGenrePost = [
     const games = [];
 
     if (!errors.isEmpty()) {
-      /*res.render("genre_form", {
+      res.render("genre_form", {
         title: "Create Genre",
         genre: genre,
         errors: errors.array(),
-      });*/
+      });
       res.send("error was made");
       return;
     } else {
@@ -65,11 +87,10 @@ exports.createGenrePost = [
         where: { name: req.body.name },
       });
       if (genreExists) {
-        //res.redirect(genreExists.url);
-        res.send("already exist");
+        res.redirect(genreExists.url);
       } else {
-        for (let i = 0; i < req.body.game.length; i++) {
-          games.push(() => findOrCreate(req.body.game[i]));
+        for (let i = 0; i < game.length; i++) {
+          games.push(() => findOrCreate(game[i]));
         }
 
         const promisedGames = await Promise.all(games.map((anon) => anon()));
@@ -77,8 +98,7 @@ exports.createGenrePost = [
         await genre.save();
         await genre.addGames(promisedGames);
 
-        res.send("it worked good job");
-        //res.redirect(genre.url);
+        res.redirect(genre.url);
       }
     }
   }),

@@ -1,0 +1,8 @@
+<% if (locals.errors) { %>
+  <% console.log(erros) %>
+  <ul>
+   <% for(let i = 0; i < errors.length; i++) { %>
+     <li><%= errors[i].msg %></li>
+   <% } %>
+  </ul>
+ <% } %>

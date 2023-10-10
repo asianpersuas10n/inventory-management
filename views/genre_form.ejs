@@ -1,0 +1,17 @@
+<%- include("layout") %>
+<h1><%= title %></h1>
+<form method="POST" action="">
+  <div class="form-group">
+    <div>
+      <label for="name">Genre:</label>
+      <input type="text" id="name" placeholder="RPG, FPS, etc." name="name" value="<%= typeof genre === "undefined" ? "" : genre.name %>" />
+    </div>
+    <div>
+      <label for="game">Games:</label>
+      <textarea id="game" name="game" placeholder="Seperate game names with commas and a space like so 'game1, game2'" value="<% if(!typeof genre === "undefined") return genre.game ? genre.game : "" %>" ></textarea>
+    </div>
+    <button type="submit">Submit</button>
+  </div>
+</form>
+<%- include("show_errors") %>
+<%- include("layout_end") %>
