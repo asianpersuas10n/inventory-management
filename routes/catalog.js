@@ -22,13 +22,13 @@ router.get("/genre/create", genre_controller.createGenreGet);
 router.post("/genre/create", genre_controller.createGenrePost);
 
 // GET request to delete Genre.
-//router.get("/genre/:id/delete", genre_controller.deleteGenreGet);
+router.get("/genre/:id/delete", genre_controller.deleteGenreGet);
 
 // POST request to delete Genre.
 router.post("/genre/:id/delete", genre_controller.deleteGenrePost);
 
 // GET request to update Genre.
-//router.get("/genre/:id/update", genre_controller.updateGenreGet);
+router.get("/genre/:id/update", genre_controller.updateGenreGet);
 
 // POST request to update Genre.
 router.post("/genre/:id/update", genre_controller.updateGenrePost);

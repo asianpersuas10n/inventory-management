@@ -1,0 +1,21 @@
+<%- include("layout") %>
+<h1><%= title %></h1>
+<dl>
+  <dt>
+    Are you sure you want to delete <%= genre.name %>?
+  </dt>
+  <br>
+  <dd>
+    Note: deleting the genre will take you back to the genre list on completion.
+  </dd>
+</dl>
+<form method="POST" action="">
+    <button type="submit">Yes</button>
+</form>
+<div>
+  <button onclick="location.href = '<%= genre.url %>'">No</button>
+</div>
+<%- include("show_errors") %>
+<%- include("layout_end") %>
+
+

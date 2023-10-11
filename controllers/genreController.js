@@ -104,6 +104,27 @@ exports.createGenrePost = [
   }),
 ];
 
+// GET request to update a genre
+exports.updateGenreGet = asyncHandler(async (req, res) => {
+  const genre = await Genre.findOne({
+    where: { id: req.params.id },
+    include: Game,
+  });
+
+  const gameArray = [];
+
+  for (const key in genre.Games) {
+    gameArray.push(genre.Games[key].name);
+  }
+
+  genre.game = gameArray.join(", ");
+
+  res.render("genre_form", {
+    title: "Genre Update Form",
+    genre: genre,
+  });
+});
+
 // POST request to update a genre
 exports.updateGenrePost = [
   body("name", "Genre name must be at least three characters long.")
@@ -112,13 +133,14 @@ exports.updateGenrePost = [
     .escape(),
   asyncHandler(async (req, res) => {
     const genre = await Genre.findOne({
-      where: { id: req.body.id },
+      where: { id: req.params.id },
       include: Game,
     });
     const gameMap = {};
     const removedGames = [];
     const changes = {};
     const games = [];
+    const game = req.body.game.split(", ");
     if (req.body.name) {
       changes.name = req.body.name;
     }
@@ -126,9 +148,9 @@ exports.updateGenrePost = [
       changes.description = req.body.description;
     }
 
-    for (let i = 0; i < req.body.game.length; i++) {
-      games.push(() => findOrCreate(req.body.game[i]));
-      gameMap[req.body.game[i]] = i;
+    for (let i = 0; i < game.length; i++) {
+      games.push(() => findOrCreate(game[i]));
+      gameMap[game[i]] = i;
     }
 
     for (let j = 0; j < genre.Games.length; j++) {
@@ -147,16 +169,26 @@ exports.updateGenrePost = [
 
     await genre.update(changes);
     await genre.reload();
-    res.send(
-      `update complete => name: ${genre.name} desc: ${genre.description}`
-    );
+    res.redirect(genre.url);
   }),
 ];
 
+// GET request to delete a genre
+exports.deleteGenreGet = asyncHandler(async (req, res) => {
+  const genre = await Genre.findOne({
+    where: { id: req.params.id },
+  });
+
+  res.render("genre_delete", {
+    title: "Genre Delete Confirmation",
+    genre: genre,
+  });
+});
+
 // POST request to delete a genre
 exports.deleteGenrePost = asyncHandler(async (req, res) => {
-  const genre = await Genre.findOne({ where: { id: req.body.id } });
+  const genre = await Genre.findOne({ where: { id: req.params.id } });
   console.log(`genre is being destroyed => name: ${genre.name}`);
   await genre.destroy();
-  res.send("destruction confirmation");
+  res.redirect("/catalog/genre");
 });
